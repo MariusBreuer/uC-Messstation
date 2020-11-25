@@ -1,0 +1,292 @@
+Anforderungen Gloria Projekt:
+
+Messstation mit folgenden Schnittstellen:
+    Stromversorgung, voraussichtlich 5VDC über USB Netzteil
+    Fullsize SD Karte zum loggen der Messdaten
+    RS232 auf DSUB für Messuhr
+        benötigt Adapter
+    3x analoger Drucksensor
+        3 poliges Kabel
+            0V schwarz  -- m8 schwarz
+            5V rot      -- m8 blau  
+            Signal gelb -- m8 braun
+    1x Volumenstromsensor mittels Impulscounter
+        3 poliges Kabel
+            open collector NPN (offen oder nach masse geschaltet - klappt mit pull up)
+            "+" 3,8-20 VDC (5VDC)
+            "T" 0V
+            "#" Signal
+        Modell #974-9541/A
+        ca 1925 Impulse/Liter
+        0.25974 ml/toggle
+        Messbereich: 0.1 bis 0.55 L/min
+        entspricht 193-1059 Pulse/min
+        entspricht 3.22-17.65 Pulse/sek.
+        entspricht 0.31-0.057 Sekunden Periodendauer
+        entspricht 0.16-0.028 Sekunden bis Flankenwechsel
+    7" Display SSD1963, ohne Touch, extra Plexiglas Zwischenschicht zum Schutz
+
+Teensy 4 muss:
+    über UART die Messuhr lesen, nach jedem <LF> (?) den aktuellen Messwert aktualisieren
+    mit 100+ Hz die 3 Analogsignale der Drucksensoren lesen, in Pa umrechnen
+    den Pinstatus vom Flowsensor lesen (interrupt wahrscheinlich nicht benötigt)
+        Kontaktflackern filtern (max. 20Hz input frequency)
+        gesamt gemessenes Volumen speichern, aktueller Volumenstrom aus Mittelwert letzter X Messungen
+    die aktuellen Messwerte in einem Protokoll via UART/SPI an das Teensy 3.6 senden
+    Kalibrierungsdaten vom Teensy 3.6 empfangen
+    Daten auf SD Karte schreiben, sofern der write trigger vom T3.6 gesendet wurde
+
+Teensy 3.6 muss:
+    empfangene Messdaten plotten, die letzten X Messungen speichern um Zeitverlauf zu plotten
+    rotary encoder auslesen
+    Taster auslesen
+
+display:
+    5 messreihen plotten
+    Aufzeichnungseinstellungen
+        Aufzeichnungsquelle
+            Taster
+            Grenzwert für Sensor A, B, C, D, E
+    Sensorkalibrierung
+        Volumenstrom
+            Start, 1 Liter Durchfluss, Stop
+        Drucksensor
+            Sensorspannung bei 0 MPa speichern
+            Sensorspannung bei 1 MPa speichern
+    stromverbrauch <500mA @ 5VDC
+
+Anschlüsse:
+Teensy 4.0
+                                 USB
+4   RS232 Vcc            -- -----\               -- Flow GND
+4   RS232 GND -\                  \              -- Flow Signal
+4   RS232 TxIN --        -- GND    \    Vin      -- Flow +5V
+4   RS232 RxOUT->RX1     -- 0  \    \   GND      -- Drucksensor A,B,C GND    
+                            1   \   +-- 3.3V     -- RS232 Vcc                
+                            2    \  |   23                                   
+3   Flow GND                3    |  |   22                                   
+3   Flow Signal          -- 4    |  |   21                                   
+3   Flow +5VDC              5    |  |   20                                   
+                            6    |  |   19                                   
+2   T3.6 TX->RX2         -- 7    |  |   18                                   
+2   T3.6 RX<-TX2         -- 8    |  |   17                                   
+                            9    |  |   16(A2)   -- Drucksensor C Signal     
+6   SD_CS           ylw  -- CS   |  |   15(A1)   -- Drucksensor B Signal     
+6   SD_MOSI         blu  -- MOSI |  |   14(A0)   -- Drucksensor A Signal     
+6   SD_MISO         grn  -- MISO |  |   SCK      --\                         
+6   SD_SCK          wht  -- -----+--+--------------/
+6   SD_GND          blk  -- -----/  |
+6   SD_3.3V         red  -- --------/
+
+3   A GND                -[332]-   A0   -[500]- GND
+3   A Sens               -[332]-   A1   -[500]- GND
+3   A +5V                -[332]-   A2   -[500]- GND
+
+5 [V] / 832 [Ohm] = 6mA
+
+
+Teensy 3.6
+                                  USB
+                         -- GND --\     Vin      -- 5V (Display)            10
+2   T4.0 TX->RX1         -- 0      \--- aGND     -- GND (Display)           10
+2   T4.0 RX<-TX1         -- 1           3.3V     -- LED_A                   10
+ 6  DB8                  -- 2           23       -- DB2                     10
+ 6  WR                   -- 3           22       -- DB1                     10
+ 6  RS                   -- 4           21       -- DB14                    10
+ 6  DB15                 -- 5           20       -- DB13                    10
+ 6  DB12                 -- 6           19       -- REST                    10
+ 6  DB10                 -- 7           18       -- CS                      10
+6   DB11                 -- 8           17       -- nc                      10
+6   DB3                  -- 9           16                                  
+6   DB4                  -- 10          15       -- DB0                     4
+6   DB6                  -- 11          14       -- DB9                     4
+6   DB7                  -- 12          13       -- DB5                     4
+6   3.3V            --+---- 3.3V    /-- GND      -- nc                      4
+                      |     24      |   A22                                 
+                      |     25      |   A21                                 
+5   Button            |  -- 26      |   39                                  
+5   EncoderA          |  -- 27      |   38                                  
+5   EncoderB          |  -- 28      |   37       -- Button Signal           2
+5   +3.3V           --/    (29)     +> (36) >--- -- Button GND              2
+5   GND             -----< (30) <---/  (35)                                 
+                           (31)        (34)                                 
+                           (32)        (33)                                 
+
+Display:
+10nc         -- NC          NC --
+10      3.3V -- LED_A       NC --
+10      Vin  -- 5V       SD_CS --
+10      19   -- REST    SD_DIN --
+10nc         -- F_CS    SD_CLK --
+10      18   -- CS       SD_DO --
+10      5    -- DB15     T_IRQ --
+10      21   -- DB14      T_DO --
+10      20   -- DB13        NC --
+10      6    -- DB12     T_DIN --
+  10    8    -- DB11      T_CS --
+  10    7    -- DB10     T_CLK --
+  10    14   -- DB9        DB7 -- 12    8
+  10    2    -- DB8        DB6 -- 11    8
+  10nc       -- RD         DB5 -- 13    8
+  10    3    -- WR         DB4 -- 10    8
+  10    4    -- RS         DB3 -- 9     8
+  10nc       -- NC         DB2 -- 23    8
+  10    3.3V -- 3.3V       DB1 -- 22    8
+  10    aGND -- GND        DB0 -- 15    8
+
+RS232:
+Lötkelchseite:
+
+--------------------------
+\  (5) (4) (3) (2) (1)  /
+ \                     /
+  \  (9) (8) (7) (6)  /
+   -------------------
+   
+5 blk
+2 ylw
+3 blu
+
+
+RS232 Shield Lötkelch           Lötkelch Einbaubuchse
+                  (2)           (2)
+                  (3)           (3)
+                  (5)           (5)
+                              //(7)
+                              \\(8)
+
+Steckverbinder:
+
+Drucksensoren     3x3  pol  molex
+Flow Sensor         3  pol  molex
+RS232 indicator     4  pol  molex
+T4.0 -- T3.6        2  pol  molex
+Display             25 pol  dupont (6+6+10(9)+4)
+
+3 pol m8 und M12 Verbinder:
+braun - signal
+schwarz - ground
+blau +5VDC
+
+UART Kommunikation:
+T3.6 to T4.0
+    start/stop recording
+    unit conversion factors Drucksensoren A,B,C und Flow Sensor
+        X mV = Y Pa
+        X clocks = X ml
+    Kalibrierungswahl, für welchen Sensor soll T4 die Rohdaten senden?
+    
+T4.0 to T3.6
+    5 Messwerte mit ca. 25Hz für Plot
+    SD Card vorhanden?
+    Drucksensor aktuelle Spannung in mV und Flow Sensor Counter
+    
+    
+Kalibrieren:
+    Drucksensoren auf Umgebungsdruck stellen, mittels Encoder gemessenen Umgebungsdruck eingeben, T3 speichert Eingabe und zugehörige Sensorspannung mV die T3 von T4 bekommt
+    Drucksensor auf hohen Druck innerhalb Messbereich bringen, mittels Encoder gemessenen Druck eingeben, T3 speichert Eingabe und zugehörige Sensorspannung mV die T3 von T4 bekommt
+    Interpolieren zwischen beiden Messwertpaaren
+    
+    Einstellen wie viel ml durch den Sensor fließen, 'start' drücken, T3 zählt die Flow Rohdaten von T4 bis 'stop' gedrückt wird. Volumenkonstante entspricht Volumen X geteilt durch Anzahl Takte Y
+    
+T3.6 Display:
+    Plot von 5 Linien, also ca. 90 Pixel Y Achse, 700 oä X Achse
+    speichere min max, reset wenn min/max Nullung
+    Textprint von current, min, max
+    Wenn Grenzwerttrigger ausgewählt plotte den Grenzwert und Textprint Zahlenwert
+    
+    Menu:       record settings, calibration, reset min/max, ggf. info screen (zugehörigkeit sensor-buchse, stromversorgung, SD card kompatibilität)
+    Anzeige:    status SD Card
+
+
+T4.0 to T3.6
+    Plot Communication:
+    [Pa,Pa,Pa,mm,ml/min oder ml, SD available, recording]
+    [p1234567,1234567,1234567,1234,12345,y,y]
+    115200 baud = 11520 chars/sec ca. 300 plotfiles/sec
+
+    raw Sensorvalues for calibration
+    [PaVolt, PaVolt, PaVolt, toggles]
+    [r12345,12345,12345,12345]
+
+T3.6 to T4.0
+    mode
+    a:  send plot data
+    b:  send plot data and record on sd card
+    c:  send sensor data
+    a,b,c
+    
+    new unit conversion factor
+    1-7 parameter nr
+        1, 2, 3 mPa/bit per Pa sensor   whole number, 6 digit, millipascal per bit
+        4, 5, 6 Pa offset (bit = 0)     whole number, 6 digit, pascal
+        7       nl/toggle               whole number, 6 digit, nanoliter / toggle
+    [1,123456]
+
+Umrechnungsfaktoren (Standardwerte):
+    16 bit analog read der Drucksensoren:
+        22888 mPa / bit
+        0 bit = 131995 Pa
+    flow sensor
+        259740 nl/toggle
+        
+        
+        
+        
+//interrupt service routine to handle button pushes on encoder knob
+void EncButtonFallingISR(){
+  cli();
+  encButtonFalling = micros();
+  encLastFallen = true;
+  sei();
+}
+
+void EncButtonRisingISR(){
+  cli();
+  if(encLastFallen == true){
+    encLastFallen = false;
+    if(encButtonFalling + debounce < micros()){
+      if(encButtonSensitive){
+        encButtonEvent = true;
+        ++encButtonCount;
+      }
+    }
+  }
+  sei();
+}
+
+void RSTencButtonEvent(){
+  cli();
+  encButtonEvent = false;
+  sei();
+}
+
+
+
+//interrupt service routine to handle button pushes on extoder knob
+void ExtButtonFallingISR(){
+  cli();
+  extButtonFalling = micros();
+  extLastFallen = true;
+  sei();
+}
+
+void ExtButtonRisingISR(){
+  cli();
+  if(extLastFallen == true){
+    extLastFallen == false;
+    if(extButtonFalling + debounce < micros()){
+      if(extButtonSensitive){
+        extButtonEvent = true;
+        ++extButtonCount;
+      }
+    }
+  }
+  sei();
+}
+
+void RSTextButtonEvent(){
+  cli();
+  extButtonEvent = false;
+  sei();
+}

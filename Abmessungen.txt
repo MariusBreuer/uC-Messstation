@@ -1,0 +1,60 @@
+hardware dimensions:
+    display
+        M3 Lochmuster
+            102     hoch
+            175     breit
+            TFT Modul symmetrisch, 2x20 Pin rechts
+        TFT Modul
+            100     hoch
+            165     breit
+            zzgl. flachbandkabel abgang unten mittig
+            7.7     dicke
+        Pixel Bereich
+            89      hoch
+            157     breit
+            Rand
+            2       links
+            6       rechts
+            3.5     oben
+            7.5     unten
+        PCB
+            108     hoch
+            181     breit
+            1.5     dicke
+    
+    rotary encoder
+        7           Gewindedurchmesser
+        4           max. Plattendicke
+        15          Knob Dia
+        17          Knob Höhe
+        pcb
+            26      lang
+            19      breit
+            8       dick
+            2.5     länge offset
+            1.5     breite offset
+        bohrung
+            17      stichmaß
+            2.5     bohrungsmitte zu außenkante
+    
+    taster:
+        9           Gewindedurchmesser
+        3           max. Plattendicke
+        12          max. Außendurchmesser
+        25          Länge (inkl. Lötkontakte)
+    
+    d sub durchführung:
+        45          breite
+        30          höhe
+    
+    RS232 adapter
+        24.5        lochbild breite
+        25.5        lochbild länge
+    sd karten slot:
+        31          breit
+        4.2         hoch
+        51.5        lang
+        schraubenlöcher
+            2.0     Durchmesser
+            26      Stichmaß
+            2.75    vom Rand (symmetrisch)
