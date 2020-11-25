@@ -74,7 +74,8 @@ Teensy 4.0
 6   SD_CS           ylw  -- CS   |  |   15(A1)   -- Drucksensor B Signal     
 6   SD_MOSI         blu  -- MOSI |  |   14(A0)   -- Drucksensor A Signal     
 6   SD_MISO         grn  -- MISO |  |   SCK      --\                         
-6   SD_SCK          wht  -- -----+--+--------------/
+6   SD_SCK          wht
+  -- -----+--+--------------/
 6   SD_GND          blk  -- -----/  |
 6   SD_3.3V         red  -- --------/
 
